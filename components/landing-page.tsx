@@ -2,9 +2,9 @@
 
 import DistortImageCanvas from "@/components/distort-image";
 import { BentoGridItem } from "@/components/ui/bento-grid";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight, Brain, Cpu, Linkedin, Mail, MoveRight, Palette, Radio, Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Item {
   id: number;
@@ -63,7 +63,7 @@ const items: Item[] = [
             </div>
         </div>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[260px]",
+    className: "md:col-span-1 md:row-span-1 h-[260px] bg-black/80 backdrop-blur-md border border-white/10",
     isContact: true,
   },
   {
@@ -71,7 +71,7 @@ const items: Item[] = [
     title: "Philosophy",
     description: "Design System",
     header: (
-        <div className="h-full flex flex-col justify-between p-6 bg-[#0a0a0a] group/phil relative overflow-hidden">
+        <div className="h-full flex flex-col justify-between p-6 bg-transparent group/phil relative overflow-hidden">
              <div className="absolute top-0 right-0 p-2">
                 <Terminal className="w-4 h-4 text-[#E85002]" />
              </div>
@@ -83,7 +83,7 @@ const items: Item[] = [
              </div>
         </div>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[260px]",
+    className: "md:col-span-1 md:row-span-1 h-[260px] bg-black/80 backdrop-blur-md border border-white/10",
   },
 
   // --- Center Column (Profile) ---
@@ -92,27 +92,15 @@ const items: Item[] = [
     title: "",
     description: "",
     header: (
-      <div className="relative w-full h-full min-h-[500px] flex items-center justify-center overflow-hidden bg-[#050505]">
-        {/* Distort Effect Component - Full size */}
-        <div className="absolute inset-0 w-full h-full opacity-80 mix-blend-luminosity hover:mix-blend-normal transition-all duration-500">
-            <DistortImageCanvas canvasImage="/mex.png" blockSize={20} />
+      <div className="relative w-full h-full min-h-[500px] flex items-center justify-center overflow-hidden ">
+        {/* Distort Effect Component */}
+        <div className="absolute left-0 right-0 bottom-0 top-16 w-full opacity-50 mix-blend-color-dodge transition-all duration-700">
+            <DistortImageCanvas canvasImage="/mexcw.png" blockSize={15} objectFit="contain" />
         </div>
 
-        {/* Profile Overlays */}
-        <div className="absolute top-4 left-4 z-20">
-             <div className="px-2 py-1 border border-[#E85002] text-[#E85002] font-mono text-[10px] bg-[#E85002]/10">
-                SUBJ: UMYAL_DIXIT
-             </div>
-        </div>
-
-         <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center">
-             <h1 className="font-display font-black text-[80px] leading-[0.8] text-white mix-blend-difference tracking-tighter text-center">
-                CREATIVE<br/>ENGINEER
-             </h1>
-        </div>
       </div>
     ),
-    className: "md:col-span-1 md:row-span-2 shadow-[0_0_20px_rgba(232,80,2,0.15)] border-[#E85002]/50",
+    className: "md:col-span-1 md:row-span-2 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] border-white/5 transition-colors duration-500 hover:border-white/20",
     isProfile: true,
   },
 
@@ -136,7 +124,7 @@ const items: Item[] = [
            </div>
         </div>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[260px] border-[#E85002]/30",
+    className: "md:col-span-1 md:row-span-1 h-[260px] border-[#E85002]/30 bg-black/80 backdrop-blur-md",
     fullDescription: "Built a multimodal AI system from scratch using PyTorch that processes video, audio, and text inputs.",
     roles: "Feb 2025 - Apr 2025",
     stack: "PyTorch · Computer Vision · NLP"
@@ -146,14 +134,14 @@ const items: Item[] = [
     title: "AI Learning",
     description: "Real-time Tutors",
     header: (
-        <div className="w-full h-full p-4 flex flex-col justify-between relative group/p1 bg-[#0a0a0a]">
+        <div className="w-full h-full p-4 flex flex-col justify-between relative group/p1 bg-transparent">
             <div className="flex justify-between items-start">
                 <Brain className="w-6 h-6 text-white/20 group-hover/p1:text-[#E85002] transition-colors" />
                 <span className="font-mono text-[10px] text-white/30">V.1.0</span>
             </div>
         </div>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[120px]",
+    className: "md:col-span-1 md:row-span-1 h-[120px] bg-black/80 backdrop-blur-md border border-white/10",
     fullDescription: "Built a live video-based learning system for children featuring real-time AI tutors.",
     roles: "Jun 2025 - Jul 2025",
     stack: "React.js · Next.js · Tailwind CSS · AI"
@@ -163,14 +151,14 @@ const items: Item[] = [
     title: "Genco",
     description: "Anon Chat",
     header: (
-        <div className="w-full h-full p-4 flex flex-col justify-between relative group/p2 bg-[#0a0a0a]">
+        <div className="w-full h-full p-4 flex flex-col justify-between relative group/p2 bg-transparent">
             <div className="flex justify-between items-start">
                 <Palette className="w-6 h-6 text-white/20 group-hover/p2:text-[#E85002] transition-colors" />
                  <span className="font-mono text-[10px] text-white/30">V.2.4</span>
             </div>
         </div>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[120px]",
+    className: "md:col-span-1 md:row-span-1 h-[120px] bg-black/80 backdrop-blur-md border border-white/10",
     fullDescription: "Designed a community app with features like anonymous chat and AI-driven moderation.",
     roles: "Sep 2024 - Sep 2024",
     stack: "React Native · Python · MongoDB"
@@ -182,7 +170,7 @@ const items: Item[] = [
     title: "",
     description: "",
     header: (
-        <div className="flex flex-col md:flex-row items-center justify-between p-8 h-full bg-[#0a0a0a] relative overflow-hidden">
+        <div className="flex flex-col md:flex-row items-center justify-between p-8 h-full bg-transparent relative overflow-hidden">
              {/* Scrolling Text Background */}
             <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 overflow-hidden opacity-5 pointer-events-none whitespace-nowrap">
                 <span className="text-[120px] font-display font-black text-transparent stroke-text">
@@ -211,7 +199,7 @@ const items: Item[] = [
             </div>
         </div>
     ),
-    className: "md:col-span-3 md:row-span-1 h-[240px]",
+    className: "md:col-span-3 md:row-span-1 h-[240px] bg-black/80 backdrop-blur-md border border-white/10",
     isSkills: true,
   },
 ];
@@ -219,6 +207,36 @@ const items: Item[] = [
 export default function LandingPage() {
   const [selectedProject, setSelectedProject] = useState<Item | null>(null);
   const [time, setTime] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  // Smooth out the scroll progress
+  const smoothProgress = useSpring(scrollYProgress, {
+    mass: 0.1,
+    stiffness: 100,
+    damping: 20,
+    restDelta: 0.001
+  });
+
+  // Animation Transforms
+  // 1. Scale Transition: Starts zoomed in (scale 2.0) - reduced from 2.5 to be less overwhelming
+  const gridScale = useTransform(smoothProgress, [0, 0.5], [2.0, 1]);
+
+  // 2. Main Hero Text: Visible initially, fades out quickly
+  const heroTextOpacity = useTransform(smoothProgress, [0, 0.2], [1, 0]);
+  const heroTextY = useTransform(smoothProgress, [0, 0.2], [0, -100]);
+  const heroTextScale = useTransform(smoothProgress, [0, 0.2], [1, 0.8]);
+
+  // 3. Side & Bottom Columns: Fade in ONLY after we zoom out significantly
+  const sideColsOpacity = useTransform(smoothProgress, [0.25, 0.5], [0, 1]);
+  const sideColsScale = useTransform(smoothProgress, [0.25, 0.5], [0.8, 1]);
+
+  // 4. Background Title Adjustment
+  const bgTitleScale = useTransform(smoothProgress, [0, 1], [1.3, 1]);
+  const bgTitleOpacity = useTransform(smoothProgress, [0.8, 1], [1, 0.1]); // Fade out at end
 
   useEffect(() => {
     const updateTime = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
@@ -228,77 +246,125 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen blueprint-grid text-white p-4 md:p-8 font-sans selection:bg-[#E85002] selection:text-white flex items-center justify-center overflow-x-hidden">
-      <div className="w-full max-w-7xl relative z-10">
+    <div ref={containerRef} className="relative min-h-[400vh] bg-black">
 
-           {/* Brutalist Header Area */}
-           <div className="mb-8 flex justify-between items-end border-b border-white/10 pb-4">
-              <div className="flex flex-col">
-                  <span className="font-mono text-[10px] text-[#E85002] mb-1">ID: 887-21-X</span>
-                  <h1 className="text-4xl font-display font-black text-white tracking-tighter uppercase">UMYAL DIXIT</h1>
-              </div>
-              <div className="hidden md:flex gap-8 text-right font-mono text-xs text-white/50">
-                  <div className="flex flex-col">
-                      <span>COORDS</span>
-                      <span className="text-white">28.61° N, 77.20° E</span>
-                  </div>
-                  <div className="flex flex-col">
-                      <span>TIME.LCL</span>
-                      <span className="text-[#E85002]">{time}</span>
-                  </div>
-              </div>
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center">
+
+           {/* Fixed Background - Creative Engineer */}
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+               <motion.h1
+                  style={{ scale: bgTitleScale, opacity: bgTitleOpacity }}
+                  className="font-display font-black text-[15vw] leading-[0.8] text-white/5 uppercase tracking-tighter text-center whitespace-nowrap select-none transform mix-blend-overlay"
+                >
+                  CREATIVE<br/>ENGINEER
+               </motion.h1>
            </div>
 
-           <div className="relative">
-                {/* Tech Maximalist Grid - Tighter Gap */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+           {/* INITIAL HERO TEXT OVERLAY - ABSOLUTE CENTER */}
+           <motion.div
+              style={{ opacity: heroTextOpacity, y: heroTextY, scale: heroTextScale }}
+              className="absolute z-50 flex flex-col items-center justify-center pointer-events-none mb-12"
+           >
+              <h2 className="text-white text-6xl md:text-8xl font-black tracking-tighter uppercase text-center drop-shadow-2xl">
+                HI I&apos;m <span className="text-[#E85002]">UMYAL</span>
+              </h2>
+           </motion.div>
 
-                    {/* Col 1 (Left) */}
-                    <div className="flex flex-col gap-4">
-                        <BentoGridItem {...items[0]} className="flex-1" />
-                        <BentoGridItem {...items[1]} className="flex-1" />
+           {/* MAIN CONTENT WRAPPER */}
+           <div className="w-full max-w-7xl relative z-10 px-4 md:px-8 h-full flex flex-col justify-center">
+
+                {/* Header Info - Fades in later or stays? Let's keep it visible but maybe subtle */}
+                {/* <motion.div
+                    style={{ opacity: sideColsOpacity }}
+                    className="absolute top-8 left-8 right-8 flex justify-between items-end border-b border-white/10 pb-4 z-40"
+                >
+                    <div className="flex flex-col">
+                        <span className="font-mono text-[10px] text-[#E85002] mb-1">ID: 887-21-X</span>
+                        <h1 className="text-4xl font-display font-black text-white tracking-tighter uppercase">UMYAL DIXIT</h1>
                     </div>
-
-                    {/* Col 2 (Center: Profile) */}
-                    <div className="flex flex-col gap-4 relative z-20">
-                        <BentoGridItem
-                            {...items[2]}
-                            className="h-[536px] bg-[#050505] relative z-30"
-                        />
+                    <div className="hidden md:flex gap-8 text-right font-mono text-xs text-white/50">
+                        <div className="flex flex-col">
+                            <span>COORDS</span>
+                            <span className="text-white">28.61° N, 77.20° E</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span>TIME.LCL</span>
+                            <span className="text-[#E85002]">{time}</span>
+                        </div>
                     </div>
+                </motion.div> */}
 
-                    {/* Col 3 (Right) */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex-1">
+
+                {/* SCALABLE GRID CONTAINER */}
+                <motion.div
+                    style={{ scale: gridScale }}
+                    className="relative w-full origin-center"
+                >
+
+                    {/* Raycast Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-10">
+
+                        {/* Col 1 (Left) - Animated */}
+                        <motion.div
+                            style={{ opacity: sideColsOpacity, scale: sideColsScale }}
+                            className="flex flex-col gap-3"
+                        >
+                            <BentoGridItem {...items[0]} className="flex-1" />
+                            <BentoGridItem {...items[1]} className="flex-1" />
+                        </motion.div>
+
+                        {/* Col 2 (Center: Profile) - The Anchor */}
+                        <div className="flex flex-col gap-3 relative z-20">
+                            {/*
+                                This item needs to look like the "Hero Image" initially.
+                                Since we zoom IN effectively by starting at scale 1.5, this center item will appear larger.
+                            */}
                             <BentoGridItem
-                                {...items[3]}
-                                onClick={() => setSelectedProject(items[3])}
-                                className="h-full"
+                                {...items[2]}
+                                className="h-[536px] bg-[#080808] relative z-30 glow-orange border-white/10 shadow-[0_0_50px_-10px_#E85002_40]"
                             />
                         </div>
-                         <div className="flex-1 flex flex-col gap-4">
-                            <BentoGridItem
-                                {...items[4]}
-                                onClick={() => setSelectedProject(items[4])}
-                                className="flex-1"
-                            />
-                            <BentoGridItem
-                                {...items[5]}
-                                onClick={() => setSelectedProject(items[5])}
-                                className="flex-1"
-                            />
-                         </div>
+
+                        {/* Col 3 (Right) - Animated */}
+                        <motion.div
+                            style={{ opacity: sideColsOpacity, scale: sideColsScale }}
+                            className="flex flex-col gap-3"
+                        >
+                            <div className="flex-1">
+                                <BentoGridItem
+                                    {...items[3]}
+                                    onClick={() => setSelectedProject(items[3])}
+                                    className="h-full"
+                                />
+                            </div>
+                             <div className="flex-1 flex flex-col gap-3">
+                                <BentoGridItem
+                                    {...items[4]}
+                                    onClick={() => setSelectedProject(items[4])}
+                                    className="flex-1"
+                                />
+                                <BentoGridItem
+                                    {...items[5]}
+                                    onClick={() => setSelectedProject(items[5])}
+                                    className="flex-1"
+                                />
+                             </div>
+                        </motion.div>
+
                     </div>
 
-                </div>
+                    {/* Bottom Row - Animated */}
+                    <motion.div
+                         style={{ opacity: sideColsOpacity, scale: sideColsScale }}
+                         className="md:col-span-3 mt-3 relative z-20"
+                    >
+                        <BentoGridItem
+                            {...items[6]}
+                            className="w-full shadow-none"
+                        />
+                    </motion.div>
 
-                {/* Bottom Row */}
-                <div className="md:col-span-3 mt-4 relative z-20">
-                    <BentoGridItem
-                        {...items[6]}
-                        className="w-full shadow-none"
-                    />
-                </div>
+                </motion.div>
 
            </div>
       </div>

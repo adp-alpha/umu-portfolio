@@ -9,13 +9,15 @@ import { Mesh, Raycaster, ShaderMaterial, TextureLoader, Vector2 } from 'three';
 interface DistortImageProps {
     canvasImage: string | StaticImageData;
     blockSize?: number;
+    objectFit?: 'cover' | 'contain';
 }
 
-const DistortImage = ({ canvasImage, blockSize = 25 }: DistortImageProps) => {
+const DistortImage = ({ canvasImage, blockSize = 25, objectFit = 'cover' }: DistortImageProps) => {
     const meshRef = useRef<Mesh | null>(null);
     const { gl, camera, size } = useThree();
     const [mouse, setMouse] = useState(new Vector2(0, 0));
     const [hover, setHover] = useState(0);
+    const [imgAspect, setImgAspect] = useState<number | null>(null); // Track image aspect ratio
 
     const raycaster = new Raycaster();
 
@@ -25,7 +27,12 @@ const DistortImage = ({ canvasImage, blockSize = 25 }: DistortImageProps) => {
     useEffect(() => {
         // Convert StaticImageData to string if needed
         const imageSrc = typeof canvasImage === 'string' ? canvasImage : canvasImage.src;
-        textureRef.current = new TextureLoader().load(imageSrc);
+        new TextureLoader().load(imageSrc, (tex) => {
+             textureRef.current = tex;
+             if(tex.image) {
+                 setImgAspect(tex.image.width / tex.image.height);
+             }
+        });
     }, [canvasImage]);
 
     // Update mouse position on mouse move
@@ -86,13 +93,23 @@ const DistortImage = ({ canvasImage, blockSize = 25 }: DistortImageProps) => {
           distortion = vec2(0.03) * effect * 2.0;
         }
 
-        vec4 textureColor = texture(uTexture, vUv);
-        vec4 color = texture2D(uTexture, vUv + distortion * uHover);
+        // Safety check for texture
+        vec4 color = vec4(0.0);
+        // Only sample if texture exists (though material handles this mostly)
+        color = texture2D(uTexture, vUv + distortion * uHover);
 
         gl_FragColor = color;
       }
     `,
     });
+
+    // Update material uniform when texture loads
+    useEffect(() => {
+        if(shaderMaterial.uniforms.uTexture && textureRef.current) {
+             shaderMaterial.uniforms.uTexture.value = textureRef.current;
+        }
+    }, [imgAspect, shaderMaterial.uniforms.uTexture]);
+
 
     // Use the Raycaster to detect mouse position over the image
     useFrame(() => {
@@ -108,15 +125,30 @@ const DistortImage = ({ canvasImage, blockSize = 25 }: DistortImageProps) => {
 
     // Calculate the correct plane size in world space based on the camera's view and canvas size
     const calculatePlaneSize = () => {
-        const aspect = size.width / size.height;
-        const height = camera instanceof THREE.PerspectiveCamera
+        const viewportAspect = size.width / size.height;
+        const viewHeight = camera instanceof THREE.PerspectiveCamera
             ? 2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
             : 2 * camera.top; // Fallback for OrthographicCamera
-        const width = height * aspect;
-        return { width, height };
+        const viewWidth = viewHeight * viewportAspect;
+
+        if (objectFit === 'contain' && imgAspect) {
+             if (imgAspect > viewportAspect) {
+                // Image is wider than viewport -> fit to width
+                return { width: viewWidth, height: viewWidth / imgAspect };
+             } else {
+                // Image is taller than viewport -> fit to height
+                return { width: viewHeight * imgAspect, height: viewHeight };
+             }
+        }
+
+        // Default 'cover' logic
+        return { width: viewWidth, height: viewHeight };
     };
 
     const { width, height } = calculatePlaneSize();
+
+    // Only render if aspect is loaded or default cover
+    if(objectFit === 'contain' && !imgAspect) return null;
 
     return (
         <mesh ref={meshRef} position={[0, 0, 0]}>
@@ -126,7 +158,7 @@ const DistortImage = ({ canvasImage, blockSize = 25 }: DistortImageProps) => {
     );
 };
 
-const DistortImageCanvas = ({ canvasImage }: DistortImageProps) => {
+const DistortImageCanvas = ({ canvasImage, blockSize = 25, objectFit = 'cover' }: DistortImageProps) => {
     return (
         <Canvas
             style={{
@@ -138,7 +170,7 @@ const DistortImageCanvas = ({ canvasImage }: DistortImageProps) => {
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} />
             <perspectiveCamera position={[0, 0, 10]} />
-            <DistortImage canvasImage={canvasImage} />
+            <DistortImage canvasImage={canvasImage} blockSize={blockSize} objectFit={objectFit} />
         </Canvas>
     );
 };
