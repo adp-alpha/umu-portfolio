@@ -1,72 +1,84 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-background: #000000;
-  --color-foreground: #ffffff;
-  --color-primary: #E85002;
-  --color-brand-start: #000000;
-  --color-brand-mid1: #C10801;
-  --color-brand-mid2: #F16001;
-  --color-brand-end: #D9C3AB;
-
-  --font-display: var(--font-syne);
-  --font-sans: var(--font-manrope);
-
-  --animate-shine: shine 8s ease-in-out infinite;
-
-  @keyframes shine {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
+@theme {
+  --font-sans: "Manrope", sans-serif;
+  --font-display: "Syne", sans-serif;
 }
 
-
-/* Utilities */
-.text-gradient {
-  background: linear-gradient(to right, #C10801, #F16001, #D9C3AB);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.bg-noise {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-}
-
-/* Enhanced Bento Grid Effects */
-.bento-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.bento-glow {
-  box-shadow: 0 0 20px rgba(232, 80, 2, 0.3), 0 0 40px rgba(232, 80, 2, 0.1);
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-10px) rotate(1deg); }
-  66% { transform: translateY(-5px) rotate(-1deg); }
-}
-
-/* Perspective for 3D effects */
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-/* Glass morphism effect */
-.glass-morphism {
-  background: rgba(17, 17, 17, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+:root {
+  --background: #050505;
+  --foreground: #ffffff;
+  --tech-border: rgba(255, 255, 255, 0.1);
+  --tech-accent: #E85002;
 }
 
 body {
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  overflow-x: hidden;
+  position: relative;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
+/* Maximalist Blueprint Grid */
+.blueprint-grid {
+  background-size: 50px 50px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%);
+}
+
+/* Raycast Card System (Dark, Tight, Premium) */
+.raycast-card {
+  background: #080808;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px; /* Tighter Raycast Radius */
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 0 0 1px rgba(0,0,0,1); /* Deep bezel */
+}
+
+.raycast-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset; /* Inner glow border */
+}
+
+/* "Raycast Wrapped" Bottom Glow */
+.glow-orange {
+  position: relative;
+}
+.glow-orange::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at bottom, #E85002 0%, transparent 60%);
+  opacity: 0.4;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keycap Visual token for Icons */
+.raycast-key {
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.5),
+    0 1px 0 rgba(255,255,255,0.05) inset;
+}
+
+/* Glitch Typography Utility */
+.glitch-text {
+  position: relative;
+}
+
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
 }

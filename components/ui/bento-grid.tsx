@@ -13,7 +13,7 @@ export const BentoGrid = ({
   return (
     <div
       className={cn(
-        "relative grid md:auto-rows-[18rem] grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto",
+        "relative grid md:auto-rows-[18rem] grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto p-4",
         className
       )}
     >
@@ -41,51 +41,50 @@ export const BentoGridItem = ({
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
       whileHover={!transparent ? {
         y: -4,
-        transition: { duration: 0.4, ease: "easeOut" }
-      } : { scale: 1.05 }}
-      whileTap={{ scale: 0.98 }}
+        scale: 1.02,
+        transition: { duration: 0.4, type: "spring", stiffness: 200 }
+      } : {}}
       onClick={onClick}
       className={cn(
-        "row-span-1 rounded-[2rem] group/bento transition-all duration-700 justify-between flex flex-col space-y-0 cursor-pointer relative",
-        !transparent && "bg-[#030303] border border-white/5 hover:border-white/10 shadow-lg shadow-black/40 hover:shadow-2xl hover:shadow-black/60 overflow-hidden",
+        "row-span-1 group/bento transition-all duration-300 justify-between flex flex-col space-y-0 cursor-pointer relative",
+        !transparent && "tech-card overflow-hidden rounded-[40px]",
         transparent && "bg-transparent border-none shadow-none overflow-visible",
         onClick && "hover:cursor-pointer",
         className
       )}
     >
+        {/* Technical Data Decorators (Inset for Rounded Corners) */}
         {!transparent && (
           <>
-            {/* Elegant Noise Texture (Subtle) */}
-            <div className="absolute inset-0 z-0 bg-noise opacity-[0.15] pointer-events-none mix-blend-overlay" />
+             <div className="absolute top-8 right-8 flex gap-1.5 z-20 opacity-30 group-hover/bento:opacity-100 transition-opacity">
+                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+             </div>
 
-            {/* Subtle Gradient Glow from Top */}
-            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover/bento:opacity-100 transition-opacity duration-700" />
-
-            {/* Ambient Backlight (Very Subtle Colors) */}
-            <div className="absolute -top-[100px] -right-[100px] w-[200px] h-[200px] bg-white/5 rounded-full blur-[80px] group-hover/bento:bg-[#E85002]/10 transition-colors duration-1000" />
-
-            {/* Inner Highlight Border */}
-            <div className="absolute inset-0 rounded-[2rem] border border-white/5 z-20 pointer-events-none" />
+             <div className="absolute bottom-8 left-8 font-mono text-[10px] text-white/30 z-20 group-hover/bento:text-[#E85002] transition-colors tracking-widest">
+                SYS.ID.{Math.floor(Math.random() * 900) + 100}
+             </div>
           </>
         )}
 
         {/* Content Container */}
-        <div className={cn("relative z-30 w-full h-full flex flex-col", transparent ? "" : "")}>
+        <div className={cn("relative z-10 w-full h-full flex flex-col", transparent ? "" : "")}>
             {header}
             {(title || description) && (
-             <div className="p-6 md:p-8 transition-transform duration-700 group-hover/bento:translate-y-[-2px]">
-                {icon && <div className="mb-4 text-neutral-500 group-hover/bento:text-white transition-colors duration-500">{icon}</div>}
+             <div className="p-8 flex flex-col justify-end flex-1 bg-gradient-to-t from-black via-black/80 to-transparent">
+                {icon && <div className="mb-3 text-neutral-500 group-hover/bento:text-[#E85002] transition-colors duration-200">{icon}</div>}
 
-                <div className="font-display font-medium text-neutral-200 group-hover/bento:text-white mb-2 text-xl tracking-tight transition-colors duration-500">
+                <div className="font-display font-black text-white mb-1.5 text-2xl uppercase tracking-tighter">
                 {title}
                 </div>
 
-                <div className="font-sans font-medium text-neutral-500 text-xs tracking-wide uppercase group-hover/bento:text-neutral-400 transition-colors duration-500">
+                <div className="font-mono font-medium text-neutral-500 text-[10px] tracking-[0.2em] uppercase">
+                <span className="text-[#E85002] mr-2">➜</span>
                 {description}
                 </div>
             </div>
