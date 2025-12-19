@@ -54,7 +54,7 @@ void main() {
         float dist = distance(aspectUV, aspectMouse);
 
         // Brush size and intensity
-        float radius = 0.05;
+        float radius = 0.15;
         float intensity = smoothstep(radius, 0.0, dist);
 
         // Add to current buffer (Liquid addition)
