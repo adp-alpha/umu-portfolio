@@ -94,8 +94,8 @@ const items: Item[] = [
     header: (
       <div className="relative w-full h-full min-h-[500px] flex items-center justify-center overflow-hidden ">
         {/* Distort Effect Component */}
-        <div className="absolute left-0 right-0 bottom-0 top-16 w-full opacity-50 mix-blend-color-dodge transition-all duration-700">
-            <DistortImageCanvas canvasImage="/mexcw.png" blockSize={15} objectFit="contain" />
+        <div className="absolute left-0 right-0 bottom-0 top-16 w-full transition-all duration-700 pointer-events-auto">
+            <DistortImageCanvas canvasImage="/mex.png" revealImage="/mexc.png" blockSize={15} objectFit="contain" />
         </div>
 
       </div>
@@ -272,28 +272,6 @@ export default function LandingPage() {
 
            {/* MAIN CONTENT WRAPPER */}
            <div className="w-full max-w-7xl relative z-10 px-4 md:px-8 h-full flex flex-col justify-center">
-
-                {/* Header Info - Fades in later or stays? Let's keep it visible but maybe subtle */}
-                {/* <motion.div
-                    style={{ opacity: sideColsOpacity }}
-                    className="absolute top-8 left-8 right-8 flex justify-between items-end border-b border-white/10 pb-4 z-40"
-                >
-                    <div className="flex flex-col">
-                        <span className="font-mono text-[10px] text-[#E85002] mb-1">ID: 887-21-X</span>
-                        <h1 className="text-4xl font-display font-black text-white tracking-tighter uppercase">UMYAL DIXIT</h1>
-                    </div>
-                    <div className="hidden md:flex gap-8 text-right font-mono text-xs text-white/50">
-                        <div className="flex flex-col">
-                            <span>COORDS</span>
-                            <span className="text-white">28.61° N, 77.20° E</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span>TIME.LCL</span>
-                            <span className="text-[#E85002]">{time}</span>
-                        </div>
-                    </div>
-                </motion.div> */}
-
 
                 {/* SCALABLE GRID CONTAINER */}
                 <motion.div

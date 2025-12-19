@@ -2,175 +2,301 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { StaticImageData } from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Mesh, Raycaster, ShaderMaterial, TextureLoader, Vector2 } from 'three';
+import { ShaderMaterial, TextureLoader, Vector2 } from 'three';
 
 interface DistortImageProps {
     canvasImage: string | StaticImageData;
+    revealImage?: string | StaticImageData;
     blockSize?: number;
     objectFit?: 'cover' | 'contain';
 }
 
-const DistortImage = ({ canvasImage, blockSize = 25, objectFit = 'cover' }: DistortImageProps) => {
-    const meshRef = useRef<Mesh | null>(null);
-    const { gl, camera, size } = useThree();
-    const [mouse, setMouse] = useState(new Vector2(0, 0));
-    const [hover, setHover] = useState(0);
-    const [imgAspect, setImgAspect] = useState<number | null>(null); // Track image aspect ratio
+// --------------------------------------------------------------------------------
+// SHADER: SIMULATION (The Liquid Trail)
+// --------------------------------------------------------------------------------
+const simulationVertexShader = `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
 
-    const raycaster = new Raycaster();
+const simulationFragmentShader = `
+uniform sampler2D uInput; // Previous frame
+uniform vec2 uMouse;
+uniform float uAspect;
+uniform bool uHasMouse;
 
-    // Load texture once on component mount
-    const textureRef = useRef<THREE.Texture | null>(null);
+varying vec2 vUv;
+
+void main() {
+    vec2 uv = vUv;
+
+    // Sample previous frame
+    vec4 current = texture2D(uInput, uv);
+
+    // Fade out (Dissipation)
+    // .96 = Long trails, .90 = Short trails
+    current.rgb *= 0.94;
+
+    // Mouse Input (Brush)
+    if (uHasMouse) {
+        // Adjust mouse distance for aspect ratio to get perfect circle
+        vec2 aspectUV = uv;
+        aspectUV.x *= uAspect;
+
+        vec2 aspectMouse = uMouse;
+        aspectMouse.x *= uAspect;
+
+        float dist = distance(aspectUV, aspectMouse);
+
+        // Brush size and intensity
+        float radius = 0.05;
+        float intensity = smoothstep(radius, 0.0, dist);
+
+        // Add to current buffer (Liquid addition)
+        current.rgb += intensity * 0.8;
+    }
+
+    current.rgb = clamp(current.rgb, 0.0, 1.0);
+    gl_FragColor = current;
+}
+`;
+
+// --------------------------------------------------------------------------------
+// SHADER: MAIN RENDER (Displacement + Reveal)
+// --------------------------------------------------------------------------------
+const mainVertexShader = `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const mainFragmentShader = `
+uniform sampler2D uTexture;     // Base
+uniform sampler2D uReveal;      // Reveal
+uniform bool uHasReveal;
+uniform sampler2D uDisplacement; // FBO Trail
+uniform float uImgAspect;
+uniform float uCanvasAspect;
+uniform float uObjectFit;
+
+varying vec2 vUv;
+
+vec3 grayscale(vec3 color) {
+    float g = dot(color, vec3(0.299, 0.587, 0.114));
+    return vec3(g);
+}
+
+void main() {
+    vec2 uv = vUv;
+
+    // --- 1. Get Displacement Value ---
+    vec4 disp = texture2D(uDisplacement, uv);
+    float d = disp.r; // Distortion intensity from trail
+
+    // --- 2. Displace UVs for LIQUID effect ---
+    // We displace the UVs used for the texture lookup.
+    // Shift pixels slightly based on trail intensity
+    vec2 distortUV = uv - vec2(d * 0.05, d * 0.05 * (uCanvasAspect > 1.0 ? 1.0 : uCanvasAspect));
+
+    // --- 3. Aspect Ratio Correction ---
+    // We must apply aspect correction to the DISTORTED UVs
+    vec2 finalUV = distortUV;
+
+    float canvasRatio = uCanvasAspect;
+    float imageRatio = uImgAspect;
+    vec2 scale = vec2(1.0);
+
+    if (uObjectFit > 0.5) { // Contain
+        if (canvasRatio > imageRatio) scale.x = imageRatio / canvasRatio;
+        else scale.y = canvasRatio / imageRatio;
+    } else { // Cover
+        if (canvasRatio > imageRatio) scale.y = canvasRatio / imageRatio;
+        else scale.x = imageRatio / canvasRatio;
+    }
+    finalUV = (finalUV - 0.5) / scale + 0.5;
+
+    // Bounds check
+    if (finalUV.x < 0.0 || finalUV.x > 1.0 || finalUV.y < 0.0 || finalUV.y > 1.0) discard;
+
+    // --- 4. Sample Colors ---
+    vec4 baseColor = texture2D(uTexture, finalUV);
+    if (!uHasReveal) baseColor.rgb = grayscale(baseColor.rgb);
+    vec4 revealColor = texture2D(uReveal, finalUV);
+
+    // --- 5. Mix based on Displacement (Reveal Mask) ---
+    // Map d (0..1) to opacity.
+    float mixFactor = smoothstep(0.05, 0.4, d); // Threshold to reveal
+
+    vec4 finalColor = mix(baseColor, revealColor, mixFactor);
+
+    // Optional: Add a "glitch" line or chromatic aberration at the edge?
+    // Let's keep it clean liquid like Lando.
+
+    gl_FragColor = finalColor;
+}
+`;
+
+
+const DistortImage = ({ canvasImage, revealImage, objectFit = 'cover' }: DistortImageProps) => {
+    const { gl, size, viewport } = useThree();
+    const mouseRef = useRef(new Vector2(0.5, 0.5));
+    const [texture, setTexture] = useState<THREE.Texture | null>(null);
+    const [revealTexture, setRevealTexture] = useState<THREE.Texture | null>(null);
+    const [imgAspect, setImgAspect] = useState(1);
+    const hasMouseMoved = useRef(false);
+
+    // FBO Setup (Ping-Pong buffers)
+    const [simulationTargetA] = useState(() => new THREE.WebGLRenderTarget(512, 512, {
+        type: THREE.HalfFloatType,
+        format: THREE.RGBAFormat,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+    }));
+    const [simulationTargetB] = useState(() => new THREE.WebGLRenderTarget(512, 512, {
+        type: THREE.HalfFloatType,
+        format: THREE.RGBAFormat,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+    }));
+
+    const simCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), []);
+    const simScene = useMemo(() => new THREE.Scene(), []);
+    const simMaterial = useMemo(() => new THREE.ShaderMaterial({
+        uniforms: {
+            uInput: { value: null },
+            uMouse: { value: new Vector2(0.5, 0.5) },
+            uAspect: { value: 1.0 },
+            uHasMouse: { value: false }
+        },
+        vertexShader: simulationVertexShader,
+        fragmentShader: simulationFragmentShader
+    }), []);
+    const simMesh = useMemo(() => new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMaterial), [simMaterial]);
 
     useEffect(() => {
-        // Convert StaticImageData to string if needed
-        const imageSrc = typeof canvasImage === 'string' ? canvasImage : canvasImage.src;
-        new TextureLoader().load(imageSrc, (tex) => {
-             textureRef.current = tex;
-             if(tex.image) {
-                 setImgAspect(tex.image.width / tex.image.height);
+        simScene.add(simMesh);
+    }, [simScene, simMesh]);
+
+
+    // Load Textures
+    useEffect(() => {
+        const loader = new TextureLoader();
+        const load = async () => {
+             const src = typeof canvasImage === 'string' ? canvasImage : canvasImage.src;
+             const tex = await new Promise<THREE.Texture>(resolve => loader.load(src, resolve));
+             setTexture(tex);
+             if (tex.image) setImgAspect(tex.image.width / tex.image.height);
+
+             if (revealImage) {
+                 const revSrc = typeof revealImage === 'string' ? revealImage : revealImage.src;
+                 const revTex = await new Promise<THREE.Texture>(resolve => loader.load(revSrc, resolve));
+                 setRevealTexture(revTex);
+             } else {
+                 setRevealTexture(tex);
              }
-        });
-    }, [canvasImage]);
+        };
+        load();
+    }, [canvasImage, revealImage]);
 
-    // Update mouse position on mouse move
-    const handleMouseMove = (e: MouseEvent) => {
-        const rect = gl.domElement.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        setMouse(new Vector2(x, y));
-    };
-
-    // Detect hover intensity based on mouse proximity
-    const handleMouseEnter = () => setHover(2);
-    const handleMouseLeave = () => setHover(0);
-
-    // Attach mouse event listeners
+    // Mouse Handler
     useEffect(() => {
-        const onMouseMove = (e: MouseEvent) => handleMouseMove(e);
-        const canvasElement = gl.domElement;
-        canvasElement.addEventListener('mousemove', onMouseMove);
-        canvasElement.addEventListener('mouseenter', handleMouseEnter);
-        canvasElement.addEventListener('mouseleave', handleMouseLeave);
+        const handleMouseMove = (e: MouseEvent) => {
+            const rect = gl.domElement.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = 1.0 - ((e.clientY - rect.top) / rect.height);
+            mouseRef.current.set(x, y);
+            hasMouseMoved.current = true;
+        };
+        gl.domElement.addEventListener('mousemove', handleMouseMove);
         return () => {
-            canvasElement.removeEventListener('mousemove', onMouseMove);
-            canvasElement.removeEventListener('mouseenter', handleMouseEnter);
-            canvasElement.removeEventListener('mouseleave', handleMouseLeave);
+             gl.domElement.removeEventListener('mousemove', handleMouseMove);
         };
     }, [gl]);
 
-    // Create the shader material
-    const shaderMaterial = new ShaderMaterial({
+    // Main Material
+    const renderMaterial = useMemo(() => new ShaderMaterial({
         uniforms: {
-            uTexture: { value: textureRef.current },
-            uHover: { value: hover },
-            uMouse: { value: mouse },
+            uTexture: { value: null },
+            uReveal: { value: null },
+            uHasReveal: { value: false },
+            uDisplacement: { value: null },
+            uImgAspect: { value: 1 },
+            uCanvasAspect: { value: 1 },
+            uObjectFit: { value: objectFit === 'contain' ? 1 : 0 }
         },
-        vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-        fragmentShader: `
-      uniform sampler2D uTexture;
-      uniform float uHover;
-      uniform vec2 uMouse;
-      varying vec2 vUv;
+        vertexShader: mainVertexShader,
+        fragmentShader: mainFragmentShader
+    }), [objectFit]);
 
-      void main() {
-        float blocks = ${blockSize.toFixed(1)};
-        vec2 blocksUv = floor(vUv * blocks) / blocks;
-        float distance = length(blocksUv - uMouse);
-        float effect = smoothstep(0.3, 0.00, distance);
+    // Render Loop (Ping Pong)
+    const targets = useRef({ read: simulationTargetB, write: simulationTargetA });
 
-        vec2 distortion = vec2(0.0);
+    useFrame(({ gl }) => {
+        // 1. Update Simulation
+        simMaterial.uniforms.uInput.value = targets.current.read.texture;
+        simMaterial.uniforms.uMouse.value.copy(mouseRef.current);
+        simMaterial.uniforms.uAspect.value = size.width / size.height;
+        simMaterial.uniforms.uHasMouse.value = hasMouseMoved.current;
 
-        if (uHover > 0.0) {
-          distortion = vec2(0.03) * effect * 2.0;
-        }
+        // Render to write target
+        gl.setRenderTarget(targets.current.write);
+        gl.render(simScene, simCamera);
+        gl.setRenderTarget(null);
 
-        // Safety check for texture
-        vec4 color = vec4(0.0);
-        // Only sample if texture exists (though material handles this mostly)
-        color = texture2D(uTexture, vUv + distortion * uHover);
+        // 2. Update Main Material
+        renderMaterial.uniforms.uDisplacement.value = targets.current.write.texture;
+        renderMaterial.uniforms.uImgAspect.value = imgAspect;
+        renderMaterial.uniforms.uCanvasAspect.value = size.width / size.height;
+        if (texture) renderMaterial.uniforms.uTexture.value = texture;
+        if (revealTexture) renderMaterial.uniforms.uReveal.value = revealTexture;
+        renderMaterial.uniforms.uHasReveal.value = !!revealImage;
 
-        gl_FragColor = color;
-      }
-    `,
+        // 3. Swap targets
+        const t = targets.current.read;
+        targets.current.read = targets.current.write;
+        targets.current.write = t;
     });
 
-    // Update material uniform when texture loads
-    useEffect(() => {
-        if(shaderMaterial.uniforms.uTexture && textureRef.current) {
-             shaderMaterial.uniforms.uTexture.value = textureRef.current;
-        }
-    }, [imgAspect, shaderMaterial.uniforms.uTexture]);
-
-
-    // Use the Raycaster to detect mouse position over the image
-    useFrame(() => {
-        if (shaderMaterial && meshRef.current) {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(meshRef.current);
-            if (intersects.length > 0) {
-                const uv = intersects[0].uv;
-                shaderMaterial.uniforms.uMouse.value = uv;
-            }
-        }
-    });
-
-    // Calculate the correct plane size in world space based on the camera's view and canvas size
-    const calculatePlaneSize = () => {
-        const viewportAspect = size.width / size.height;
-        const viewHeight = camera instanceof THREE.PerspectiveCamera
-            ? 2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
-            : 2 * camera.top; // Fallback for OrthographicCamera
-        const viewWidth = viewHeight * viewportAspect;
-
-        if (objectFit === 'contain' && imgAspect) {
-             if (imgAspect > viewportAspect) {
-                // Image is wider than viewport -> fit to width
-                return { width: viewWidth, height: viewWidth / imgAspect };
-             } else {
-                // Image is taller than viewport -> fit to height
-                return { width: viewHeight * imgAspect, height: viewHeight };
-             }
-        }
-
-        // Default 'cover' logic
-        return { width: viewWidth, height: viewHeight };
-    };
-
-    const { width, height } = calculatePlaneSize();
-
-    // Only render if aspect is loaded or default cover
-    if(objectFit === 'contain' && !imgAspect) return null;
 
     return (
-        <mesh ref={meshRef} position={[0, 0, 0]}>
-            <planeGeometry args={[width, height]} />
-            <primitive object={shaderMaterial} />
+        <mesh>
+            <planeGeometry args={[viewport.width, viewport.height]} />
+            <primitive object={renderMaterial} />
         </mesh>
     );
 };
 
-const DistortImageCanvas = ({ canvasImage, blockSize = 25, objectFit = 'cover' }: DistortImageProps) => {
+const DistortImageCanvas = ({
+    canvasImage,
+    revealImage,
+    blockSize = 25,
+    objectFit = 'cover'
+}: DistortImageProps) => {
     return (
         <Canvas
             style={{
                 backgroundColor: 'transparent',
                 width: '100%',
                 height: '100%',
+                display: 'block',
+                cursor: 'none'
             }}
+            camera={{ position: [0, 0, 5], fov: 75 }}
+            dpr={[1, 2]}
         >
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} />
-            <perspectiveCamera position={[0, 0, 10]} />
-            <DistortImage canvasImage={canvasImage} blockSize={blockSize} objectFit={objectFit} />
+            <DistortImage
+                canvasImage={canvasImage}
+                revealImage={revealImage}
+                blockSize={blockSize}
+                objectFit={objectFit}
+            />
         </Canvas>
     );
 };
