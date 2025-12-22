@@ -190,7 +190,7 @@ const DistortImage = ({ canvasImage, revealImage, objectFit = 'cover' }: Distort
         const loader = new TextureLoader();
         const load = async () => {
              const src = typeof canvasImage === 'string' ? canvasImage : canvasImage.src;
-             const tex = await new Promise<THREE.Texture>(resolve => loader.load(src, resolve));
+             const tex:any = await new Promise<THREE.Texture>(resolve => loader.load(src, resolve));
              setTexture(tex);
              if (tex.image) setImgAspect(tex.image.width / tex.image.height);
 

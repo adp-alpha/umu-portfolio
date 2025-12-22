@@ -4,6 +4,7 @@ import DistortImageCanvas from "@/components/distort-image";
 import { BentoGridItem } from "@/components/ui/bento-grid";
 import { AnimatePresence, motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight, Brain, Cpu, Linkedin, Mail, MoveRight, Palette, Radio, Terminal } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 interface Item {
@@ -71,17 +72,23 @@ const items: Item[] = [
     title: "Philosophy",
     description: "Design System",
     header: (
-        <div className="h-full flex flex-col justify-between p-6 bg-transparent group/phil relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-2">
-                <Terminal className="w-4 h-4 text-[#E85002]" />
-             </div>
+        <Link href="/gallery" className="w-full h-full block">
+          <div className="h-full flex flex-col justify-between p-6 bg-transparent group/phil relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-2">
+                  <Terminal className="w-4 h-4 text-[#E85002]" />
+               </div>
 
-             <div className="z-10 mt-auto">
-                <h3 className="text-4xl font-display font-black text-white uppercase glitch-text" data-text="LOGIC">LOGIC</h3>
-                <div className="w-full h-px bg-[#E85002] my-2" />
-                <p className="text-[10px] text-white/60 font-mono uppercase tracking-widest">{">>"} Override Chaos</p>
-             </div>
-        </div>
+               <div className="z-10 mt-auto">
+                  <div className="flex items-center gap-2 mb-1">
+                      <div className="w-1.5 h-1.5 bg-[#E60023] rounded-full" />
+                      <span className="font-mono text-[9px] text-[#E60023]">INSPIRATION</span>
+                  </div>
+                  <h3 className="text-4xl font-display font-black text-white uppercase glitch-text" data-text="GALLERY">GALLERY</h3>
+                  <div className="w-full h-px bg-[#E85002] my-2" />
+                  <p className="text-[10px] text-white/60 font-mono uppercase tracking-widest">{">>"} View Pins</p>
+               </div>
+          </div>
+        </Link>
     ),
     className: "md:col-span-1 md:row-span-1 h-[260px] bg-black/80 backdrop-blur-md border border-white/10",
   },
@@ -110,24 +117,26 @@ const items: Item[] = [
     title: "Emotion AI",
     description: "Featured",
     header: (
-        <div className="w-full h-full p-6 flex flex-col justify-between relative overflow-hidden group/featured bg-[#0a0a0a]">
-           <div className="absolute top-0 right-0 w-16 h-16 bg-[#E85002] flex items-center justify-center">
-                <ArrowUpRight className="text-black w-6 h-6 group-hover/featured:rotate-45 transition-transform duration-300" />
-           </div>
-
-           <div className="mt-auto relative z-10">
-             <div className="flex items-center gap-2 mb-2">
-                 <div className="w-2 h-2 bg-[#E85002] rounded-full animate-pulse" />
-                 <span className="font-mono text-[10px] text-[#E85002]">DEPLOYED</span>
+        <Link href="/projects" className="w-full h-full block">
+          <div className="w-full h-full p-6 flex flex-col justify-between relative overflow-hidden group/featured bg-[#0a0a0a]">
+             <div className="absolute top-0 right-0 w-16 h-16 bg-[#E85002] flex items-center justify-center">
+                  <ArrowUpRight className="text-black w-6 h-6 group-hover/featured:rotate-45 transition-transform duration-300" />
              </div>
-             <p className="text-white/60 font-mono text-xs">PyTorch // Vision</p>
-           </div>
-        </div>
+
+             <div className="mt-auto relative z-10">
+               <div className="flex items-center gap-2 mb-2">
+                   <div className="w-2 h-2 bg-[#E85002] rounded-full animate-pulse" />
+                   <span className="font-mono text-[10px] text-[#E85002]">NETFLIX STYLE</span>
+               </div>
+               <p className="text-white/60 font-mono text-xs">View All Projects</p>
+             </div>
+          </div>
+        </Link>
     ),
-    className: "md:col-span-1 md:row-span-1 h-[260px] border-[#E85002]/30 bg-black/80 backdrop-blur-md",
-    fullDescription: "Built a multimodal AI system from scratch using PyTorch that processes video, audio, and text inputs.",
-    roles: "Feb 2025 - Apr 2025",
-    stack: "PyTorch · Computer Vision · NLP"
+    className: "md:col-span-1 md:row-span-1 h-[260px] border-[#E85002]/30 bg-black/80 backdrop-blur-md cursor-pointer",
+    fullDescription: "Explore my work in a cinematic Netflix-style interface.",
+    roles: "Interactive",
+    stack: "React · Framer Motion"
   },
   {
     id: 1,
